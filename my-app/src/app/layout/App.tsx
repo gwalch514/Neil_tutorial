@@ -1,19 +1,28 @@
-import { useState, useEffect, Fragment, SyntheticEvent } from "react";
+import {
+  useState,
+  useEffect,
+  Fragment,
+  SyntheticEvent,
+  useContext,
+} from "react";
 import { Container } from "semantic-ui-react";
 import "semantic-ui-css/semantic.min.css";
 import { IActivity } from "../models/activity";
 import { NavBar } from "../../features/nav/NavBar";
-import { ActivityDashboard } from "../activities/dashboard/ActivityDashboard";
+import ActivityDashboard from "../activities/dashboard/ActivityDashboard";
 import agent from "../api/agent";
+import ActivityStore from "../stores/activityStore";
+import { LoadingComponent } from "./LoadingComponent";
+import { observer } from "mobx-react-lite";
 
 const App = () => {
+  const activityStore = useContext(ActivityStore);
   const [activities, setActivities] = useState<IActivity[]>([]);
   const [selectedActivity, setSelectedActivity] =
     useState<IActivity | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [target, setTarget] = useState("");
-
   const handleSelectActivity = (id: string) => {
     setSelectedActivity(activities.filter((activity) => activity.id === id)[0]);
     setEditMode(false);
@@ -62,22 +71,18 @@ const App = () => {
       .then(() => setSubmitting(false));
   };
   useEffect(() => {
-    agent.Activities.list().then((response) => {
-      let activities: IActivity[] = [];
-      response.forEach((activity: IActivity) => {
-        activity.date = activity.date.split(".")[0];
-        activities.push(activity);
-      });
-      setActivities(activities);
-    });
-  }, []);
+    activityStore.loadActivities();
+  }, [activityStore]);
+
+  if (activityStore.loadingInitial)
+    return <LoadingComponent content="Loading activities..." />;
 
   return (
     <Fragment>
       <NavBar openCreateForm={handleOpenCreateForm} />
       <Container style={{ marginTop: "7em" }}>
         <ActivityDashboard
-          activities={activities}
+          activities={activityStore.activities}
           selectActivity={handleSelectActivity}
           selectedActivity={selectedActivity}
           editMode={editMode}
@@ -94,4 +99,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default observer(App);
